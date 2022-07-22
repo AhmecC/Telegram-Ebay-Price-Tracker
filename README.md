@@ -1,14 +1,10 @@
 # Telegram-Ebay-Price-Tracker
 
-/track_new To Do List:
-- Search the item and if 0 results come up then tell them a mistake was made and to retry
-- search the item and inform the user of how many results came up (if low search results then make them confirm they want to still track)
+Description:
+> This bot allows users to type in a product and a target price. The bot will then periodically search the item on ebay and see if it satisfies the target price. For Buy-it-now items the user will be notified straight away (with a link sending them to the item). For Auction items the user will only be notified when there is six hours left of the Auction and it still satisfies the target price. It will include the postage price in the total price that is compared with the target. The bot allows you to see your tracked items and also delete them if need be.
 
-/manage To Do List:
-- Make output nice :)
+Upcoming Functionality:
+- /manage Output to look nicer
+- /track_new checks how many search results there are (if 0 it won't track it, if < 20 it will ask if user is sure, if > 20 no notifying needed)
+- Actual Track Functionality
 
-/Actual Tracker Functionality:
-- Search the item up on ebay and look at the top (not yet known) results every 6 hours
-- For Buy-it=now items, inform the user if it satisfies target price
-- For Bidding items, inform the user only if there is less than 6 hours of bidding left and it satisfies their target price
-- Give a setting where they can either track both Buy-it-now or Bids or just one 
