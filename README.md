@@ -1,8 +1,8 @@
 # Telegram-Ebay-Price-Tracker
 
 /track_new To Do List:
--Search the item and if 0 results come up then tell them a mistake was made and to retry
--earch the item and inform the user of how many results came up (if low search results then make them confirm they want to still track)
+- Search the item and if 0 results come up then tell them a mistake was made and to retry
+- search the item and inform the user of how many results came up (if low search results then make them confirm they want to still track)
 
 /manage To Do List:
 - Make output nice :)
