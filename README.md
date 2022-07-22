@@ -8,3 +8,5 @@ Upcoming Functionality:
 - /track_new checks how many search results there are (if 0 it won't track it, if < 20 it will ask if user is sure, if > 20 no notifying needed)
 - Actual Track Functionality
 
+Fixes:
+- Fixed Issue where upon selection an option (/track_new) users could not move to another section (i.e. /manage)
