@@ -6,7 +6,6 @@
 
 /manage To Do List:
 - Make output nice :)
-- give option to delete items
 
 /Actual Tracker Functionality:
 - Search the item up on ebay and look at the top (not yet known) results every 6 hours
