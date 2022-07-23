@@ -10,3 +10,4 @@
 
 **Fixes:**
 - Fixed Issue where upon selection an option (/track_new) users could not move to another section (i.e. /manage)
+- Fixed Issue where the track list was not numbered correctly both before and after deleting an item
