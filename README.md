@@ -1,4 +1,4 @@
-**Description**
+## **Description**
 > This Telegram bot, given a target price, will track items on ebay and messages you if the item meets the requirements. Message the bot @ebayInvestigator_bot.
 
 
