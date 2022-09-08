@@ -4,10 +4,13 @@ After entering a specific item and target price, this will check the first page 
 ## **Updates**
 > - 22/07/22 - Users can now switch sections after already selecting an option
 > - 22/07/22 - Track list is now numbered correctly after deleting an item
-> - 08/09/22 - Finalised Tracker Functionality
+> - 06/08/22 - Finalised Tracker Functionality
+> - 08/09/22 - Tracker is LIVE
 
 ## **Upcoming Updates**
 > - /manage Output to look nicer
+> - If not 3 best results, then send less if possible
+> - Create Validator Section (Stops the resending of the same item)
 
 
 
