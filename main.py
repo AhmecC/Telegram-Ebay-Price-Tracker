@@ -6,37 +6,33 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from Scrape import Scraper
-path = "CHROMEDRIVER PATH"
+path = r"CHROMEDRIVER PATH"
 bot_token = ""
 bot = telebot.TeleBot(bot_token)
 
 
-a = True
-while a:
-    
+Forever = True
+while Forever:
     # -------------------- /start RESPONSE -------------------- #
-    @bot.message_handler(commands=['start']
+    @bot.message_handler(commands=['start'])
     def info(message):
-        """If /start is sent, then an Info message is returned. Their Chat ID is stored if a new user"""
+        """/start sends instructions and stores Chat ID"""
         bot.send_message(message.chat.id,
                          "😎 I can help you track items on ebay, "
                          "so you don't have to spend hours looking for the Perfect Price! 💸"
                          "\n\n/track_new -- Track a New Item"
                          "\n/manage -- View/Delete your Tracked Items")
-        x = message.chat.id  # Record User ID and add to file
-        with open("Ids", "a+") as file:
+        ID = message.chat.id
+        with open("Ids", "a+") as file:  # Store User ID
             ids = file.readlines()
-            if x not in ids:
-                file.write(f"\n{x}")
+            if ID not in ids:
+                file.write(f"\n{ID}")
 
 
     # -------------------- /track_new RESPONSE -------------------- #
     @bot.message_handler(commands=['track_new'])
     def new_item(message):
-        """If /track new is selected:
-        - Instructions on how to add message is sent
-        - ADD_NEW records their response, and check_item() verifies if its correct format"""
-
+        """/track_new sends instructions on how to Add to list, with ADD_NEW recording their response"""
         ADD_NEW = bot.send_message(message.chat.id, "🧐 Specify the Item to be Tracked and your Target Price, "
                                                     "separated by a Comma. Be Specific!"
                                                     "\n\nE.g. Ipad Pro 2020 11 inch, 400")
@@ -46,7 +42,7 @@ while a:
     def check_item(message):
         """Prompts Re-input if: Wrong Format, Price not an integer, No Search Results for their item
         Successful if: Correct Format, /manage or /start entered"""
-                         
+
         response = message.text.split(", ")
         try:
             num = results(response)
@@ -64,6 +60,7 @@ while a:
                 manage_items(message)
             else:
                 no_comma_error(message, num)
+
         else:
             bot.reply_to(message, "🥳 Added to Track List!")
             chat_id = message.chat.id
@@ -190,17 +187,31 @@ while a:
         else:
             bot.register_next_step_handler(sent, delete_item)
 
-
+    # -------------------- MATCH CHECKER -------------------- #
     def checker():
+        """Checks if its Time to look for Matches"""
         tp = (int(time.time()) % 86400) + 60 * 60  # Adjusts for time discrepancy
-        print(tp)
-        times = [28800, 50400, 42780, 72000] # 8am, 2pm and 8pm
-
+        times = [28800, 50400, 72000]  # 8am, 2pm and 8pm
         if 28700 <= tp <= 72100:  # if between 8am-8pm
             for i in times:
                 if i - 60 <= tp <= i + 60:
                     Scraper()
+                    sendoff()
 
+    def sendoff():
+        """Sends Best 3 Matches to the User"""
+        with open(f"IDs", "r", encoding="utf-8") as f:
+            IDs = f.readlines()  # Obtain IDs to open send files
+            for ID in IDs:
+                with open(f"{ID}_send", "r", encoding="utf-8") as file:
+                    content = file.readlines()
+                    if len(content) == 3:  # Then we have 3 Matches
+                        for x in content:
+                            bot.send_message(ID, x, parse_mode="MarkdownV2")
+
+                            
     checker()
     bot.polling()
+
+
                          
