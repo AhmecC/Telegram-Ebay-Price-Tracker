@@ -200,7 +200,7 @@ while Forever:
 
     def sendoff():
         """Sends Best 3 Matches to the User"""
-        with open(f"IDs", "r", encoding="utf-8") as f:
+        with open(f"Ids", "r", encoding="utf-8") as f:
             IDs = f.readlines()  # Obtain IDs to open send files
             for ID in IDs:
                 with open(f"{ID}_send", "r", encoding="utf-8") as file:
