@@ -164,7 +164,7 @@ class Scraper:
 
 
                 if x[0][0] == "Auction":
-                    nice.append(f"{x[0][0]} Item with {x[0][1][:12]}is currently [£{price}]({hyper})")
+                    nice.append(f"{x[0][0]} Item with {x[0][1][:-13]}is currently [£{price}]({hyper})")
                 else:
                     nice.append(f"{x[0]} Item is [£{price}]({hyper})")
 
