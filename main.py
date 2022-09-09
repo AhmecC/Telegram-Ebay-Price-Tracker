@@ -4,12 +4,17 @@ import telebot
 import time
 from time import sleep
 from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options # - For Replit
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from Scrape import Scraper
 path = r"C:\Users\aqeel\OneDrive\Desktop\Code\chromedriver.exe"
 bot_token = "5564448511:AAHM64pB01SaRkilGu4mexIZVRrMB2urrA8"
 bot = telebot.TeleBot(bot_token)
+
+# chrome_options = Options()
+# chrome_options.add_argument('--no-sandbox')
+# chrome_options.add_argument('--disable-dev-shm-usage')# - For Replit
 
 # -------------------- TELEGRAM HANDLER -------------------- #
 def hosting():
@@ -64,7 +69,7 @@ def hosting():
                     fil.write(f"\n[{a}], {message.text}")
 
     def num_results(response):
-        driver = webdriver.Chrome(executable_path=path)
+#         driver = webdriver.Chrome(options=chrome_options) # - For Replit
         try:
             driver.get("https://www.ebay.co.uk/")
             search = driver.find_element(By.XPATH, '//*[@id="gh-ac"]')
