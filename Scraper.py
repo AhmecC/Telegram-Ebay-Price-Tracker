@@ -1,14 +1,18 @@
 from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from time import sleep
 import os
 path = r"C:\Users\aqeel\OneDrive\Desktop\Code\chromedriver.exe"
 
+# chrome_options = Options()
+# chrome_options.add_argument('--no-sandbox')
+# chrome_options.add_argument('--disable-dev-shm-usage')
 
 class Scraper:
     def __init__(self):
-        self.driver = webdriver.Chrome(executable_path=path)
+        self.driver = webdriver.Chrome(options=chrome_options)
         self.all = []
         self.item_list_finder()
         self.item_storage()
