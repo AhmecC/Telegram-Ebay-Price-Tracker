@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from time import sleep
 import os
-path = r""
+path = r"C:\Users\aqeel\OneDrive\Desktop\Code\chromedriver.exe"
 
 
 class Scraper:
@@ -142,6 +142,8 @@ class Scraper:
                             SATISFIED.append(i)
 
             # ------ Remove Dodgy Items ------ #
+            for i in SATISFIED:
+                print(i)
             SATISFIED = [i for i in SATISFIED if i[2] > 0.5*target_price]
             SATISFIED = sorted(SATISFIED, key=lambda x: x[2], reverse=False)  # Lowest to Highest Price
 
