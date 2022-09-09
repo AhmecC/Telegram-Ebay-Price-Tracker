@@ -8,8 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from Scrape import Scraper
-path = r"C:\Users\aqeel\OneDrive\Desktop\Code\chromedriver.exe"
-bot_token = "5564448511:AAHM64pB01SaRkilGu4mexIZVRrMB2urrA8"
+bot_token = ""
 bot = telebot.TeleBot(bot_token)
 
 # chrome_options = Options()
