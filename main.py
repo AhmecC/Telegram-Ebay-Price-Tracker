@@ -168,7 +168,7 @@ def hosting():
 def checker():
     """Checks if its Time to look for Matches"""
     while True:
-        sleep(10)
+        sleep(120)
         tp = (int(time.time()) % 86400) + 60 * 60  # Adjusts for time discrepancy
         times = [28800, 61200, 50400, 72000]  # 8am, 2pm and 8pm
         if 28700 <= tp <= 72100:  # if between 8am-8pm
