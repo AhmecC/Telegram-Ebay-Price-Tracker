@@ -9,8 +9,9 @@ After entering a specific item and target price, this will check the first page 
 
 ## **Upcoming Updates**
 > - /manage Output to look nicer
-> - If not 3 best results, then send less if possible
+> - Ensure it works for multiple users and items
 > - Create Validator Section (Stops the resending of the same item)
+>
 
 
 
