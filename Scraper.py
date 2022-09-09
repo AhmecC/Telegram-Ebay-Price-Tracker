@@ -4,7 +4,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from time import sleep
 import os
-path = r"C:\Users\aqeel\OneDrive\Desktop\Code\chromedriver.exe"
 
 # chrome_options = Options()
 # chrome_options.add_argument('--no-sandbox')
