@@ -1,7 +1,4 @@
-import os
-import threading
-import telebot
-import time
+import threading, telebot, time, sqlite3
 from time import sleep
 from selenium import webdriver
 # from selenium.webdriver.chrome.options import Options # - For Replit
@@ -15,9 +12,7 @@ bot = telebot.TeleBot(bot_token)
 # chrome_options.add_argument('--no-sandbox')
 # chrome_options.add_argument('--disable-dev-shm-usage')# - For Replit
 
-# -------------------- TELEGRAM HANDLER -------------------- #
 def hosting():
-    # -------------------- /start RESPONSE -------------------- # ALL GOOD
     @bot.message_handler(commands=['start'])
     def start(message):
         """/start sends instructions and stores Chat ID"""
@@ -26,15 +21,17 @@ def hosting():
                          "so you don't have to spend hours looking for the Perfect Price! 💸"
                          "\n\n/track_new -- Track a New Item"
                          "\n/manage -- View/Delete your Tracked Items")
-
-        # ------ STORE USER ID ------ #
         ID = message.chat.id
-        with open("Ids", "a+") as file:
-            ids = file.readlines()
-            if ID not in ids:
-                file.write(f"\n{ID}")
 
-    # -------------------- /track_new RESPONSE -------------------- # ALL GOOD
+        cur = ids_Database.cursor()
+        # cursor.execute("CREATE TABLE ids (id INTEGER NOT NULL UNIQUE)")
+        cur.execute(f"SELECT * FROM ids where id = {ID}")
+        if cur.fetchone() == "None":
+            print("yes")
+            cur.execute(f"INSERT INTO ids VALUES({message.chat.id})")
+            ids_Database.commit()
+
+            
     @bot.message_handler(commands=['track_new'])
     def new(message):
         ADD_NEW = bot.send_message(message.chat.id, "🧐 Specify the Item to be Tracked and your Target Price, "
@@ -58,14 +55,11 @@ def hosting():
                 no_comma_error(message, num)
             else:
                 bot.reply_to(message, "🥳 Added to Track List!")
-                chat_id = message.chat.id
-                with open(f"{chat_id}_Track", "a") as file:
-                    if os.stat(f"{chat_id}_Track").st_size == 0:
-                        file.write(f"[#], ITEM, PRICE")  # Checks if file is empty and then creates headings
-                with open(f"{chat_id}_Track", "r") as f:
-                    a = len(f.readlines())  # Length of file is used to number the entries
-                with open(f"{chat_id}_Track", "a") as fil:
-                    fil.write(f"\n[{a}], {message.text}")
+                id = message.chat.id
+                track_database = sqlite3.connect(f"{id}_Track.db", check_same_thread=False)
+                cur = track_database.cursor()
+                cur.execute(f"INSERT INTO '{id}_Track' VALUES ('{response[0]}', '{response[1]}')")
+                track_database.commit()  # Adds Item, Price to database
 
     def num_results(response):
 #         driver = webdriver.Chrome(options=chrome_options) # - For Replit
@@ -102,19 +96,24 @@ def hosting():
     # -------------------- /manage RESPONSE -------------------- #
     @bot.message_handler(commands=['manage'])
     def manage(message):
-        chat_id = message.chat.id
-        with open(f"{chat_id}_Track", "r") as file:
-            length = len(file.readlines())
-
-        if os.stat(f"{chat_id}_Track").st_size == 0 or length == 1:
+        id = message.chat.id
+        track_database = sqlite3.connect(f"{id}_Track.db", check_same_thread=False)
+        cur = track_database.cursor()
+        cur.execute(f"SELECT * FROM '{id}_Track'")
+        items = cur.fetchall()
+        track_database.commit()  # Obtain Track List
+        if len(items) == 0:
             bot.send_message(message.chat.id,
-                             "You have no tracked items!\n\nUse /track_new to track an item")  # If nothing in file or just the title
+                             "You have no tracked items!\n\nUse /track_new to track an item")
         else:
-            with open(f"{chat_id}_Track", "r") as file:
-                mytable = file.read()
-                sent3 = bot.send_message(message.chat.id,
-                                         f"{mytable}\n\nTo delete find the corresponding row number and type 'del' before it\n\nE.g. Del 5")
-                bot.register_next_step_handler(sent3, delete_item)
+            mytable = "[#] [NAME] [PRICE]"
+            count = 1
+            for x in items:
+                mytable += f"\n[{count}] {x[0]} - £{x[1]}"  # Generate Table
+                count += 1
+            sent3 = bot.send_message(message.chat.id,
+                                     f"{mytable}\n\nTo delete find the corresponding row number and type 'del' before it\n\nE.g. Del 5")
+            bot.register_next_step_handler(sent3, delete_item)
 
     def delete_item(message):
         second_check = message.text
@@ -126,35 +125,25 @@ def hosting():
             manage(message)
         else:
             response = second_check.split(" ")
-            ID = message.chat.id
-            with open(f"{ID}_Track", "r") as file:
-                length = len(file.readlines())
-                if response[0] == "Del" and int(response[1]) <= length:
-                    A = file.readlines()
-                    B = A[int(response[1])]
-                    A.remove(B)
-                    with open(f"{ID}_Track", "w") as f:
-                        f.write("[#], ITEM, PRICE")
-                        A.remove("[#], ITEM, PRICE\n")  # remove the title from a, as we just added it to file
-
-                    try:
-                        with open(f"{ID}_Track", "a") as fp:
-                            count = 1
-                            for i in A:
-                                y = i[2:]
-                                fp.write(f"\n[{count}{y}")
-                                count += 1
-                    except:
-                        pass
-                    bot.reply_to(message, "🥳 Deleted from Track List!")
-                else:
-                    delete_error(message)
+            id = message.chat.id
+            track_database = sqlite3.connect(f"{id}_Track.db", check_same_thread=False)
+            cur = track_database.cursor()
+            cur.execute(f"SELECT * FROM '{id}_Track'")
+            items = cur.fetchall()
+            track_database.commit()  # Obtain Track List
+            if response[0] == "Del" and int(response[1]) <= len(items):
+                chosen = items[int(response[1])-1]
+                cur.execute(f"DELETE FROM '{id}_Track' where item = '{chosen[0]}'")
+                track_database.commit()
+                bot.reply_to(message, "🥳 Deleted from Track List!")
+            else:
+                delete_error(message)
 
 
 
     def delete_error(message):
         sent = bot.reply_to(message,
-                            "🧐 Did you try to delete a message? You have to type 'del' then the corresponding row number\n\nThe Correct form is: Del 5")
+                            "🧐 Did you try to delete an Item? You have to type 'del' then the corresponding row number\n\nThe Correct form is: Del 5")
         a = message.text
         if a == "/track_new":
             new(message)
@@ -183,15 +172,17 @@ def checker():
 
 def sendoff():
     """Sends Best 3 Matches to the User"""
-    with open(f"Ids", "r", encoding="utf-8") as f:
-        IDs = f.readlines()  # Obtain IDs to open send files
-        for ID in IDs:
-            with open(f"{ID}_send", "r", encoding="utf-8") as file:
-                content = file.readlines()
-                if len(content) == 3:  # Then we have 3 Matches
-                    for x in content:
-                        bot.send_message(ID, x, parse_mode="MarkdownV2")
+    cur = ids_Database.cursor()
+    cur.execute(f"SELECT * FROM ids")
+    ids = cur.fetchall()  # Obtain all ids
+    for i in ids:
+        with open(f"{i[0]}_send", "r", encoding="utf-8") as file:
+            content = file.readlines()
+            if len(content) == 3:  # Then we have 3 Matches
+                for x in content:
+                    bot.send_message(i[0], x, parse_mode="MarkdownV2")
 
+                    
 x = threading.Thread(target=hosting, args=())
 x.start()
 y = threading.Thread(target=checker(), args=())
