@@ -9,27 +9,32 @@ import os
 # chrome_options.add_argument('--no-sandbox')
 # chrome_options.add_argument('--disable-dev-shm-usage')
 
+ids_Database = sqlite3.connect("ids.db", check_same_thread=False)
+
 class Scraper:
     def __init__(self):
         self.driver = webdriver.Chrome(options=chrome_options)
+        self.ready_to_send = []
         self.all = []
         self.item_list_finder()
         self.item_storage()
 
     def item_list_finder(self):
-        """Obtain IDs and respective list of what they're tracking and searches for matches"""
-
-        with open("Ids", "r") as file:
-            IDs = file.readlines()
-            if len(IDs) != 0:  # Proceed only if ID is inside
-                for i in IDs:
-                    self.id = i
-                    with open(f"{i}_Track", "r") as f:
-                        items = f.readlines()
-                        if len(items) != 0 or len(items) != 1:  # Proceed if list has items
-                            for i in items[1:]:  # Don't include Header
-                                A = i.split(", ")
-                                self.ebay_scraper(A[1], float(A[2]))  # Send Item and Price to actual info gatherer
+        cur = ids_Database.cursor()
+        cur.execute(f"SELECT * FROM ids")
+        ids = cur.fetchall()  # Obtain all ids
+        if ids != "None":
+            for i in ids:
+                self.id = i[0]
+                track_database = sqlite3.connect(f"{self.id}_Track.db", check_same_thread=False)
+                cur = track_database.cursor()
+                cur.execute(f"SELECT * FROM '{self.id}_Track'")
+                items = cur.fetchall()
+                track_database.commit()  # Adds Item, Price to database
+                if len(items) != 0:
+                    for x in items:
+                        self.ebay_scraper(x[0], float(x[1]))
+                        
 
     def ebay_scraper(self, item, target_price):
         """Searches item on ebay and collects raw DATA inc Hyperlink"""
@@ -51,8 +56,11 @@ class Scraper:
                 link = self.driver.find_element(By.XPATH, f"/html/body/div[5]/div[4]/div[2]/div[1]/div[2]/ul/li[{x}]/div/div[2]/a")
                 hyperlinks.append(link.get_attribute("href"))
             except:
-                link = self.driver.find_element(By.XPATH, f"/html/body/div[5]/div[4]/div[3]/div[1]/div[2]/ul/li[{x}]/div/div[2]/a")
-                hyperlinks.append(link.get_attribute("href"))
+              try:
+                  link = self.driver.find_element(By.XPATH, f"/html/body/div[5]/div[4]/div[3]/div[1]/div[2]/ul/li[{x}]/div/div[2]/a")
+                  hyperlinks.append(link.get_attribute("href"))
+              except:
+                  pass
 
         # ---------- Extracting Text Data ---------- #
         TEXT_DATA = []
@@ -175,12 +183,17 @@ class Scraper:
 
 
             # ------ Report Back Satisfied Items ------ #
-            if len(SATISFIED) != 0:
-                with open(f"{self.id}_send", "w", encoding="utf-8") as file:
-                    file.write(f"{nice[0]}\n{nice[1]}\n{nice[2]}")
-
-
-
+            if len(nice) >= 3:
+                for i in nice[:3]:
+                    self.ready_to_send.append(i)
+                    print(nice)
+            else:
+                try:
+                    for i in nice[:len(nice)]:
+                        self.ready_to_send.append(i)
+                        print(nice)
+                except:
+                    pass
 
             # ------ Add all items to big list ------ #
             for i in ORGANISED:
