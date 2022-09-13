@@ -8,7 +8,6 @@ After entering a specific item and target price, this will check the first page 
 > - 08/09/22 - Tracker is LIVE
 
 ## **Upcoming Updates**
-> - /manage Output to look nicer
 > - Ensure it works for multiple users and items
 > - Create Validator Section (Stops the resending of the same item)
 >
