@@ -1,18 +1,2 @@
 # Telegram Ebay Price Tracker Bot
-After entering a specific item and target price, this will check the first page to see if any item meets the requirments (Below target price, and if Auction less than 6 hours left). Try the bot at using the handle @ebayInvestigator_bot
-
-## **Updates**
-> - 22/07/22 - Users can now switch sections after already selecting an option
-> - 22/07/22 - Track list is now numbered correctly after deleting an item
-> - 06/08/22 - Finalised Tracker Functionality
-> - 08/09/22 - Tracker is LIVE
-
-## **Upcoming Updates**
-> - Ensure it works for multiple users and items
-> - Create Validator Section (Stops the resending of the same item)
->
-
-
-
-
-
+Communicating through Telegram, the User can specify the item and target price. The Tracker will periodically search the first page of Ebay to see if any items meet the requirements (Below Target Price, If Auction <6hrs left). Users can also manage their tracked items via telegram. They will also recieve weekly reports on the average prices during the week and given guidance if they should revise their target price expectations.
