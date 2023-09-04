@@ -1,2 +1,4 @@
-# Telegram Ebay Price Tracker Bot
-Communicating through Telegram, the User can specify the item and target price. The Tracker will periodically search the first page of Ebay to see if any items meet the requirements (Below Target Price, If Auction <6hrs left). Users can also manage their tracked items via telegram. They will also recieve weekly reports on the average prices during the week and given guidance if they should revise their target price expectations.
+## Telegram Ebay Price Tracker Bot
+This application allows users to track ebay items without ever entering ebay.com themselves! Communicating through telegram, you specify an item and target price. After confirming the item exists, the tracker periodically searches for items meeting the requirements (Below target price & < 6hrs on auction). Reports back the average price weekly and gives guidance if their target price should be revised. Tracked items can be managed via telegram
+
+> I used this to buy an Ipad and Gran Turismo 7!
