@@ -1,4 +1,5 @@
 import sqlite3
+import numpy as np
 from selenium import webdriver
 # from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -10,32 +11,34 @@ path = ""
 # chrome_options.add_argument('--no-sandbox')
 # chrome_options.add_argument('--disable-dev-shm-usage')
 
-ids_Database = sqlite3.connect("ids.db", check_same_thread=False)
-
+db = sqlite3.connect('Telegram_Ebay.db', check_same_thread=False)
+cur = db.cursor()
 class Scraper:
     def __init__(self):
-#         self.driver = webdriver.Chrome(options=chrome_options)  # - Replit
         self.driver = webdriver.Chrome(executable_path=path)
         self.item_list_finder()
+        self.id = 1
+        self.batch = 1
+        self.item = 'item'
 
     def item_list_finder(self):
         """Obtain IDs and respective list of what they're tracking and searches for matches"""
-        cur = ids_Database.cursor()
-        cur.execute(f"SELECT * FROM ids")
-        ids = cur.fetchall()  # Obtain all ids
+        ids = cur.execute(f"SELECT * FROM Identifiers").fetchall()
+
+        count = cur.execute('SELECT COUNT(*) FROM Tracked_List').fetchone()[0]
+        if count != 0:
+            self.batch = cur.execute('SELECT MAX(Batch) FROM Tracked_List').fetchone()[0] + 1
+
         if ids != "None":
             for i in ids:
                 self.id = i[0]
-                track_database = sqlite3.connect(f"{self.id}_Track.db", check_same_thread=False)
-                cur = track_database.cursor()
-                cur.execute(f"SELECT * FROM '{self.id}_Track'")
-                items = cur.fetchall()
-                track_database.commit()  # Obtain Item/Price
+                items = cur.execute(f'SELECT Item, Price FROM Tracked_Items WHERE Id = {self.id}').fetchall()
                 if len(items) != 0:
                     for x in items:
-                        self.ebay_scraper(x[0], float(x[1]))  # Go Through Each Item for Each ID
-                        
-    def ebay_scraper(self, item, target_price):
+                        self.ebay_scraper(x[0])  # Go Through Each Item for Each ID
+
+    
+    def ebay_scraper(self, item):
         """Searches item on ebay and collects raw DATA inc Hyperlink"""
         self.driver.get("https://www.ebay.co.uk/")
         self.item = item
@@ -72,9 +75,10 @@ class Scraper:
             except:
                 pass
 
-        self.cleaner(TEXT_DATA, target_price)
+        self.cleaner(TEXT_DATA)
 
-    def cleaner(self, TEXT_DATA, target_price):
+    
+    def cleaner(self, TEXT_DATA):
         """Cleans Data, only stores relevant info about item"""
         cleaned = []
 
@@ -115,10 +119,10 @@ class Scraper:
                     pass
             cleaned.append([item_type, name, price, x[-1]])
 
-        self.relevance(cleaned, target_price)
-        self.big_list(cleaned)
+        self.relevance(cleaned)
 
-    def relevance(self, cleaned, target_price):
+    
+    def relevance(self, cleaned):
         """Make Sure only relevant items are shown"""
         relevant_items = self.driver.find_element(By.CLASS_NAME, 'srp-controls__count-heading').text
         try:
@@ -133,78 +137,45 @@ class Scraper:
                 cleaned = cleaned[:num]  # If num<61, we remove irrelevant search results
             except:
                 pass
+        self.big_list(cleaned)
 
-        self.satisfactory(cleaned, target_price)
+    
+    def big_list(self, cleaned): 
+        new_identifiers = set([X[3][27:39] for X in cleaned])
+        old_identifiers = set([X[0] for X in cur.execute('SELECT Identifier FROM Tracked_List').fetchall()])
+        sold = list(old_identifiers - new_identifiers)
+        for X in sold:
+            cur.execute(f"UPDATE Tracked_List SET Status = 'SOLD' WHERE Identifier = '{X}' AND Name = '{self.item}'""")
+            db.commit()
 
-    def satisfactory(self, cleaned, target_price):
-        """Sorts out so only items that satisfy conditions are left"""
-        satisfied = []
-        for i in cleaned:
-            try:  # Auction Item satisfied if <6hrs left and <Target
-                if i[0][1][1] == "h":
-                    if int(i[0][1][0]) < 6:
-                        if int(i[2]) <= target_price:
-                            satisfied.append(i)
-            except:  # Item Satisfied if <Target, we ignore Best Offer Items
-                if i[0] == "Buy it now":
-                    # i[0] == "Best Offer" or
-                    if int(i[2]) <= target_price:
-                        satisfied.append(i)
-
-        satisfied = [i for i in satisfied if i[2] > 0.5*target_price]
-        satisfied = sorted(satisfied, key=lambda x: x[2], reverse=False)  # Lowest to Highest Price
-
-        self.ready_for_send(satisfied)
-
-    def ready_for_send(self, satisfied):
-        """Make sure formatted properly for telegram message"""
-        send_database = sqlite3.connect(f"{self.id}_Send.db", check_same_thread=False)
-        cur = send_database.cursor()
-
-        nice = []
-        for x in satisfied:
-            # Fix Price #
-            price = ""
-            for i in str(x[2]):
-                if i in ".":
-                    price += f"\{i}"
-                else:
-                    price += i
-            # Fix Hyperlink #
-            hyper = ""
-            for i in x[3]:
-                if i in "\'_*[],()~>#+-_=|!":
-                    hyper += f"\{i}"
-                else:
-                    hyper += i
-
-            if x[0][0] == "Auction":
-                nice.append(f"('{x[0][0]}', '{x[0][1][:-13]}', '{price}', '{hyper}')")
-            else:
-                nice.append(f"('{x[0]}', '?', '{price}', '{hyper}')")
-
-        # the chosen ones #
-        if len(nice) >= 3:
-            for i in nice[:3]:
-                cur.execute(f"INSERT INTO '{self.id}_Send' VALUES {i}")
-                send_database.commit()
-        else:
-            try:
-                for i in nice[:len(nice)]:
-                    cur.execute(f"INSERT INTO '{self.id}_Send' VALUES {i}")
-                    send_database.commit()
-            except:
-                pass
-
-    def big_list(self, cleaned):
-        list_database = sqlite3.connect(f"{self.id}_List.db", check_same_thread=False)
-        cur = list_database.cursor()
         for i in cleaned:
             try:
                 if i[0][0] == "Auction":
-                    cur.execute(f"INSERT INTO '{self.id}_List' VALUES('{self.item}', '{i[0][0]}', '{i[2]}', '{i[3]}', '{i[3][27:39]}')")
+                    time = convert_into_hours(i[0][1])
+                    db.execute(
+                        f"INSERT OR REPLACE INTO Tracked_List (Id, Name, Type, Price, Hyperlink, Identifier, Batch, Time, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (self.id, self.item, i[0][0], i[2], i[3], i[3][27:39], self.batch, time, None)
+                    )
                 else:
-                    cur.execute(f"INSERT INTO '{self.id}_List' VALUES('{self.item}', '{i[0]}', '{i[2]}', '{i[3]}', '{i[3][27:39]}')")
-                list_database.commit()
+                    db.execute(
+                        f"INSERT OR REPLACE INTO Tracked_List (Id, Name, Type, Price, Hyperlink, Identifier, Batch, Time, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (self.id, self.item, i[0], i[2], i[3], i[3][27:39], self.batch, None, None)
+                    )
+                db.commit()
+
             except:
                 pass
+
+def convert_into_hours(time):
+    split = time.split('(')[0][:-6].split(' ')
+    tot = 0
+
+    for i in split:
+        if i[-1] == 'd':
+            tot += int(i[:-1]) * 24 * 60
+        elif i[-1] == 'h':
+            tot += int(i[:-1]) * 60
+        elif i[-1] == 'm':
+            tot += int(i[:-1])
+
+    return f"{int(np.round(tot / 60))}h"
