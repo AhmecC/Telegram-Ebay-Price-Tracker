@@ -15,29 +15,29 @@ bot = telebot.TeleBot(bot_token)
 # chrome_options.add_argument('--no-sandbox')
 # chrome_options.add_argument('--disable-dev-shm-usage')# - For Replit
 
-ids_Database = sqlite3.connect("ids.db", check_same_thread=False)
+db = sqlite3.connect('Telegram_Ebay.db', check_same_thread=False)
+cur = db.cursor()
 
 def TelegramHandler():
     @bot.message_handler(commands=['start'])
     def start(message):
-        bot.send_message(message.chat.id,"""😎 I can help you track items on ebay, 
+        bot.send_message(message.chat.id, """😎 I can help you track items on ebay, 
         so you don't have to spend hours looking for the Perfect Price! 
         💸\n\n/track_new -- Track a New Item
         \n/manage -- View/Delete your Tracked Items""")
-        id = message.chat.id
+        ID = message.chat.id
 
-        cur = ids_Database.cursor()
-        cur.execute(f"SELECT * FROM ids where id = {id}")
-        if cur.fetchone() == "None":
-            cur.execute(f"INSERT INTO ids VALUES({id})")
-            ids_Database.commit()  # Stores Unique Telegram ids
+        Unique = cur.execute(f"SELECT * FROM Identifiers where Id = {ID}").fetchone()
+        if Unique is None:
+            cur.execute(f"INSERT INTO Identifiers VALUES({ID})")  # Store Unique Telegram ID
+            db.commit()
 
             
     @bot.message_handler(commands=['track_new'])
     def new(message):
         ADD_NEW = bot.send_message(message.chat.id, "🧐 Specify the Item to be Tracked and your Target Price, "
                                                     "separated by a Comma. Be Specific!"
-                                                    "\n\nE.g. Ipad Pro 2020 11 inch, 400")
+                                                    "\n\nE.g. Pixel 7 Pro 256gb, 600")
 
         bot.register_next_step_handler(ADD_NEW, check)
 
@@ -52,15 +52,13 @@ def TelegramHandler():
         else:
             response = message.text.split(", ")
             num = num_results(response)
-            if len(response) != 2 or response[1].isdigit() == False or num == 0:
-                no_comma_error(message, num)
+            if len(response) != 2 or response[1].isdigit() is False or num == 0:
+                no_comma_error(message, num)  # If Add_New not in correct format
             else:
                 bot.reply_to(message, "🥳 Added to Track List!")
-                id = message.chat.id
-                track_database = sqlite3.connect(f"{id}_Track.db", check_same_thread=False)
-                cur = track_database.cursor()
-                cur.execute(f"INSERT INTO '{id}_Track' VALUES ('{response[0]}', '{response[1]}')")
-                track_database.commit()  # Adds item/price to id-specific database
+                ID = message.chat.id
+                cur.execute(f"INSERT INTO Tracked_Items VALUES ('{ID}', '{response[0]}', '{response[1]}')")
+                db.commit()  # Adds ID/Item/Price to database Table
 
     def num_results(response):
 #         driver = webdriver.Chrome(options=chrome_options) # - For Replit
@@ -98,12 +96,9 @@ def TelegramHandler():
     # -------------------- /manage RESPONSE -------------------- #
     @bot.message_handler(commands=['manage'])
     def manage(message):
-        id = message.chat.id
-        track_database = sqlite3.connect(f"{id}_Track.db", check_same_thread=False)
-        cur = track_database.cursor()
-        cur.execute(f"SELECT * FROM '{id}_Track'")
-        items = cur.fetchall()  # Obtain tracked items
-        track_database.commit()
+        ID = message.chat.id
+        items = cur.execute(f"SELECT Item, Price FROM Tracked_Items WHERE Id = {ID}").fetchall() # Obtain Tracked Items
+
         if len(items) == 0:
             bot.send_message(message.chat.id,
                              "You have no tracked items!\n\nUse /track_new to track an item")
@@ -127,22 +122,18 @@ def TelegramHandler():
             manage(message)
         else:
             response = second_check.split(" ")
-            id = message.chat.id
-            track_database = sqlite3.connect(f"{id}_Track.db", check_same_thread=False)
-            cur = track_database.cursor()
-            cur.execute(f"SELECT * FROM '{id}_Track'")
-            items = cur.fetchall()  # Obtain Track List
-            track_database.commit()
-            if response[0] == "Del" and int(response[1]) <= len(items):
-                chosen = items[int(response[1])-1]
-                cur.execute(f"DELETE FROM '{id}_Track' where item = '{chosen[0]}'")
-                track_database.commit()  # Delete Specific item from Database
-                bot.reply_to(message, "🥳 Deleted from Track List!")
+            ID = message.chat.id
+            items = cur.execute(f"SELECT Item, Price FROM Tracked_Items WHERE Id = {ID}").fetchall() # Get Tracked Items
 
-                list = sqlite3.connect(f"{id}_List.db", check_same_thread=False)
-                curs = list.cursor()
-                curs.execute(f"DELETE FROM '{id}_List' where Name = '{chosen[0]}'")
-                list.commit()
+            if response[0] == "Del" and int(response[1]) <= len(items):
+                bot.send_message(message.chat.id, "🥳 Deleted from Track List!")
+                chosen = items[int(response[1])-1]
+
+                cur.execute(f"DELETE FROM Tracked_Items WHERE Item = '{chosen[0]}' AND Id = '{ID}'")
+                db.commit()  # Delete Specified Item from being Tracked
+                cur.execute(f"DELETE FROM Tracked_List WHERE Name = '{chosen[0]}' AND Id = '{ID}'")
+                db.commit()  # Delete instances for Tracked_List.db
+
             else:
                 delete_error(message)
 
@@ -166,38 +157,51 @@ def TelegramHandler():
 
 # -------------------- ROUTINE MATCH CHECKER -------------------- #
 def daily_checker():
-    """Checks if its Time to look for Matches"""
     while True:
         sleep(120)
         tp = (int(time.time()) % 86400) + 60 * 60  # Adjusts for time discrepancy
-        times = [28800, 61200, 50400, 72000]  # 8am, 2pm and 8pm
-        if 28700 <= tp <= 72100:  # if between 8am-8pm
+        times = [28800, 50400, 72000]
+        if 28700 <= tp <= 72100:
             for i in times:
                 if i - 60 <= tp <= i + 60:
                     Scraper()
                     sendoff()
 
+
 def sendoff():
     """Sends Best 3 Matches to the User"""
-    cur = ids_Database.cursor()
-    cur.execute(f"SELECT * FROM ids")
-    ids = cur.fetchall()
-    for i in ids:
-        send_database = sqlite3.connect(f"{i[0]}_Send.db", check_same_thread=False)
-        curs = send_database.cursor()
-        curs.execute(f"SELECT * FROM '{i[0]}_Send'")
-        ready = curs.fetchall()
-        send_database.commit()
+    ids = cur.execute(f'SELECT * FROM Identifiers').fetchall()
+    for ID in ids:
+        items = cur.execute(f"SELECT Item, Price FROM Tracked_Items WHERE Id = '{ID[0]}'").fetchall()
 
-        for x in ready:
-            if x[0] == "Auction":
-                message = f"{x[0]} Item with {x[1]}is currently [£{x[2]}]({x[3]})"
-            else:
-                message = f"{x[0]} Item is [£{x[2]}]({x[3]})"
-            bot.send_message(i[0], message, parse_mode="MarkdownV2")
+        for Item in items:
+            lower = float(0.5 * int(Item[1]))
+            upper = float(Item[1])
 
-        curs.execute(f"DELETE FROM '{i[0]}_Send'")
-        send_database.commit()
+            matches = cur.execute(f"""SELECT Type, Time, Price, Hyperlink FROM Tracked_List WHERE Id = '{ID[0]}' AND Name = '{Item[0]}' AND Status IS NULL
+                AND ((Type = 'Auction' AND Price BETWEEN '{lower}' AND '{upper}' AND CAST(SUBSTR(Time, 1, LENGTH(Time) - 1) AS INTEGER) <= 6) OR (Type = 'Buy it now' AND Price BETWEEN '{lower}' AND '{upper}'))
+                ORDER BY Price ASC LIMIT 3""",).fetchall()
+
+            for X in matches:
+                price = fix(X[2])
+                hyper = fix(X[3])
+
+                if X[0] == 'Auction':
+                    message = f"{X[0]} Item with {X[1]} left is currently [£{price}]({hyper})"
+                else:
+                    message = f"{X[0]} Item is [£{price}]({hyper})"
+                bot.send_message(ID[0], message, parse_mode='MarkdownV2')
+
+
+def fix(txt):
+    out = ""
+    for i in str(txt):
+        if i in "\_*[],()~>#+-_=|!.'":
+            out += f"\{i}"
+        else:
+            out += i
+    return out
+
 
 def weekly_checker():
     while True:
@@ -205,61 +209,44 @@ def weekly_checker():
         day = datetime.now().weekday()
         now = (int(time.time()) % 86400) + 60 * 60
         if day == 6:  # Sunday
-            if 64650 <= now <= 64950:  # 6pm with 5 minute leeway
+            if 64650 <= now <= 64950 # 6pm with 5 minute leeway
                 report()
 
 
 def report():
-    curID = ids_Database.cursor()
-    curID.execute("SELECT * FROM ids")
-    ids = curID.fetchall()
+    ids = cur.execute('SELECT * FROM Identifiers')
 
-    if ids != "None":
-        for X in ids:  # For Each ID
-            track_db = sqlite3.connect(f"{X[0]}_Track.db", check_same_thread=False)
-            curTR = track_db.cursor()
-            curTR.execute(f"SELECT * FROM '{X[0]}_Track'")
-            trackList = curTR.fetchall()
+    if ids != 'None':
+        for ID in ids:
+            items = cur.execute(f"SELECT Item, Price FROM Tracked_Items WHERE Id = '{ID[0]}'").fetchall()
+            for Item in items:
+                BIN = cur.execute(
+                    f"SELECT Price FROM Tracked_List WHERE Id = '{ID[0]}' AND Name = '{Item[0]}' AND Type = 'Buy it now'").fetchall()
+                AUC = cur.execute(
+                    f"SELECT Price FROM Tracked_List WHERE Id = '{ID[0]}' AND Name = '{Item[0]}' AND (Type = 'Auction' OR Type = 'Best Offer')").fetchall()
 
-            send_db = sqlite3.connect(f"{X[0]}_List.db", check_same_thread=False)
-            curSN = send_db.cursor()
-            for I in trackList:
-                curSN.execute(f"SELECT * FROM '{X[0]}_List' where Name='{I[0]}'")
-                items = curSN.fetchall()
+                message = stats(BIN, AUC, Item[1])
+                send = fix(f"You should {message} for {Item[0]} with target price £{Item[1]}")
 
-                message = stats(items, I[1], I[0])
-
-                send = ""
-                for i in message:
-                    if i in "=.":
-                        send += f"\{i}"
-                    else:
-                        send += i
-
-                bot.send_message(X[0], send, parse_mode="MarkdownV2")
-                curSN.execute(f"DELETE FROM '{X[0]}_List' where Name='{I[0]}'")
-                send_db.commit()
+                bot.send_message(ID[0], send, parse_mode="MarkdownV2")
+                cur.execute(f"DELETE FROM Tracked_List WHERE Id = '{ID[0]}' AND Name = '{Item[0]}'")
+                db.commit()
 
 
-def stats(items, target, name):
-    BIN = [y[2] for y in items if y[1] == "Buy it now"]
-    AUC = [y[2] for y in items if y[1] == "Auction" or y[1] == "Best Offer"]
+def stats(BIN, AUC, target):
+    BIN = round(statistics.median([X[0] for X in BIN]), 2)
+    AUC = round(statistics.median([X[0] for X in AUC]), 2)
 
-    BIN_median = round(statistics.median(BIN), 2)
-    AUC_median = round(statistics.median(AUC), 2)
+    BIN_perc = round((target - BIN) / BIN * 100, 2)
+    AUC_perc = round((target - BIN) / AUC * 100, 2)
 
-    BIN_cent = round((target-BIN_median)/BIN_median * 100, 2)
-    AUC_cent = round((target-AUC_median)/AUC_median * 100, 2)
-
-    if BIN_cent > 30 and AUC_cent > 25:
+    if BIN_perc > 30 and AUC_perc > 25:
         a = "Increase your Target Price"
-    elif BIN_cent < -30 and AUC_cent < -25:
+    elif BIN_perc < -30 and AUC_perc < -25:
         a = "Decrease your Target Price"
     else:
         a = "keep the same Target Price"
-
-    message = f"""Weekly Report for: {name}\n\nMedian for BIN Items = £{BIN_median} & Auction Items = £{AUC_median}\n\nYou should {a}"""
-    return message
+    return a
                     
 x = threading.Thread(target=TelegramHandler, args=())
 x.start()
