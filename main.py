@@ -20,7 +20,7 @@ cur = db.cursor()
 
 def TelegramHandler():
     @bot.message_handler(commands=['start'])
-    def start(message):
+    def start(message):  # Start Message for New Users
         bot.send_message(message.chat.id, """😎 I can help you track items on ebay, 
         so you don't have to spend hours looking for the Perfect Price! 
         💸\n\n/track_new -- Track a New Item
@@ -29,7 +29,7 @@ def TelegramHandler():
 
         Unique = cur.execute(f"SELECT * FROM Identifiers where Id = {ID}").fetchone()
         if Unique is None:
-            cur.execute(f"INSERT INTO Identifiers VALUES({ID})")  # Store Unique Telegram ID
+            cur.execute(f"INSERT INTO Identifiers VALUES({ID})")  # Store Unique Telegram IDs
             db.commit()
 
             
@@ -50,17 +50,17 @@ def TelegramHandler():
         elif first_check == "/manage":
             manage(message)
         else:
-            response = message.text.split(", ")
+            response = message.text.split(", ")  # Check id Add_New is in correct format
             num = num_results(response)
             if len(response) != 2 or response[1].isdigit() is False or num == 0:
-                no_comma_error(message, num)  # If Add_New not in correct format
+                no_comma_error(message, num)  # Error if response has formatting issues
             else:
                 bot.reply_to(message, "🥳 Added to Track List!")
                 ID = message.chat.id
                 cur.execute(f"INSERT INTO Tracked_Items VALUES ('{ID}', '{response[0]}', '{response[1]}')")
-                db.commit()  # Adds ID/Item/Price to database Table
+                db.commit()  # Adds ID/Item/Price to Tracked_Items
 
-    def num_results(response):
+    def num_results(response):  # Check if Item exists
 #         driver = webdriver.Chrome(options=chrome_options) # - For Replit
         driver = webdriver.Chrome(executable_path=path)
         try:
@@ -106,7 +106,7 @@ def TelegramHandler():
             mytable = "[#] [NAME] [PRICE]"
             count = 1
             for x in items:
-                mytable += f"\n[{count}] {x[0]} - £{x[1]}"  # Generate Item Table
+                mytable += f"\n[{count}] {x[0]} - £{x[1]}"  # Generates Visual Item-Price Table for given ID
                 count += 1
             sent3 = bot.send_message(message.chat.id,
                                      f"{mytable}\n\nTo delete find the corresponding row number and type 'del' before it\n\nE.g. Del 5")
@@ -121,7 +121,7 @@ def TelegramHandler():
         elif second_check == "/manage":
             manage(message)
         else:
-            response = second_check.split(" ")
+            response = second_check.split(" ") 
             ID = message.chat.id
             items = cur.execute(f"SELECT Item, Price FROM Tracked_Items WHERE Id = {ID}").fetchall() # Get Tracked Items
 
@@ -135,7 +135,7 @@ def TelegramHandler():
                 db.commit()  # Delete instances for Tracked_List.db
 
             else:
-                delete_error(message)
+                delete_error(message)  # If not in correct format
 
 
 
@@ -152,11 +152,11 @@ def TelegramHandler():
         else:
             bot.register_next_step_handler(sent, delete_item)
 
-    bot.polling(none_stop=True)
+    bot.polling(none_stop=True)  # Waits Non-Stop for Messages
 
 
 # -------------------- ROUTINE MATCH CHECKER -------------------- #
-def daily_checker():
+def daily_checker():  # Checks Items at 8am, 2pm and 6pm
     while True:
         sleep(120)
         tp = (int(time.time()) % 86400) + 60 * 60  # Adjusts for time discrepancy
@@ -168,8 +168,7 @@ def daily_checker():
                     sendoff()
 
 
-def sendoff():
-    """Sends Best 3 Matches to the User"""
+def sendoff():  # Sends Best 3 Matches to User
     ids = cur.execute(f'SELECT * FROM Identifiers').fetchall()
     for ID in ids:
         items = cur.execute(f"SELECT Item, Price FROM Tracked_Items WHERE Id = '{ID[0]}'").fetchall()
@@ -193,7 +192,7 @@ def sendoff():
                 bot.send_message(ID[0], message, parse_mode='MarkdownV2')
 
 
-def fix(txt):
+def fix(txt):  # message must be in specific format
     out = ""
     for i in str(txt):
         if i in "\_*[],()~>#+-_=|!.'":
@@ -203,7 +202,7 @@ def fix(txt):
     return out
 
 
-def weekly_checker():
+def weekly_checker():  # 6pm Sunday sends weekly report
     while True:
         sleep(300)
         day = datetime.now().weekday()
@@ -213,7 +212,7 @@ def weekly_checker():
                 report()
 
 
-def report():
+def report():  # Gives guidance on if target price is too high/low or okay
     ids = cur.execute('SELECT * FROM Identifiers')
 
     if ids != 'None':
